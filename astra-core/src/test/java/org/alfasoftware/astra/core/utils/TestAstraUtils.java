@@ -1,8 +1,12 @@
 package org.alfasoftware.astra.core.utils;
 
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import org.alfasoftware.astra.core.refactoring.UseCase;
+import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.PackageDeclaration;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
+import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,16 +15,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.alfasoftware.astra.core.matchers.Matcher;
-import org.alfasoftware.astra.core.matchers.TypeMatcher;
-import org.alfasoftware.astra.core.refactoring.UseCase;
-import org.eclipse.jdt.core.dom.ASTVisitor;
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.PackageDeclaration;
-import org.eclipse.jdt.core.dom.TypeDeclaration;
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests for the general purpose utilities provided in {@link AstraUtils}.
@@ -75,9 +70,9 @@ public class TestAstraUtils {
 
 
   @Test
-  public void testGetNameForAnonymousClassDeclaration() {
+  public void testGetNameForAnonymousClassDeclaration() throws IOException {
     // Given
-    CompilationUnit compilationUnit = parse(ExampleWithAnonymousClassDeclaration.class);
+    CompilationUnit compilationUnit = new SourceDeclaration(ExampleWithAnonymousClassDeclaration.class).getCompilationUnit();
 
     // When
     List<AnonymousClassDeclaration> anonymousClassDeclarations = new ArrayList<>();
@@ -96,62 +91,47 @@ public class TestAstraUtils {
   }
 
 
-  private CompilationUnit parse(Class<?> source) {
-    File before = new File(TEST_EXAMPLES + "/" + source.getName().replaceAll("\\.", "/") + ".java");
-
-    try {
-      String fileContentBefore = new String(Files.readAllBytes(before.toPath()));
-
-      return AstraUtils.readAsCompilationUnit(fileContentBefore, new String[] {SOURCE, TEST_SOURCE}, UseCase.DEFAULT_CLASSPATH_ENTRIES.toArray(new String[0]));
-    } catch (IOException e) {
-      e.printStackTrace();
-      fail();
-      throw new IllegalArgumentException();
-    }
-  }
-
   @Test
   public void testGetPackageName() {
-//    // Given
-//    CompilationUnit compilationUnit = parse(ExampleWithAnonymousClassDeclaration.class);
-//
-//    // When
-//    List<AnonymousClassDeclaration> anonymousClassDeclarations = new ArrayList<>();
-//    ASTVisitor visitor = new ASTVisitor() {
-//      @Override
-//      public boolean visit(AnonymousClassDeclaration node) {
-//        anonymousClassDeclarations.add(node);
-//        return super.visit(node);
-//      }
-//    };
-//    compilationUnit.accept(visitor);
-//    visitor.
-//    TypeDeclaration typeDeclaration = new TypeDeclaration(compilationUnit.getAST());
-//
-//    // Then
-//    assertEquals(UseCase.class.getName(), AstraUtils.getPackageName(anonymousClassDeclarations.get(0).bodyDeclarations()));
-//    assertEquals(ASTOperation.class.getName(), AstraUtils.getPackageName(anonymousClassDeclarations.get(1)));
-
     // Given
-    String classWithName = "package org.alfasoftware.astra.core.utils;" +
-                           "public class AstraUtils";
+    String astraUtilsClassWithName = "package org.alfasoftware.astra.core.utils;" +
+                                     "public class AstraUtils";
+    ClassVisitor visitor = new SourceDeclaration(astraUtilsClassWithName).getClassVisitor();
+
+    List<TypeDeclaration> typeDeclarations = visitor.getTypeDeclarations();
 
     // When
-    ClassVisitor visitor = parseM(classWithName);
+    PackageDeclaration packageName = AstraUtils.getPackageName(typeDeclarations.get(0));
 
     // Then
-    List<TypeDeclaration> typeDeclarations = visitor.getTypeDeclarations();
-    AstraUtils.getPackageName(typeDeclarations.get(0));
-
-    PackageDeclaration packageName = AstraUtils.getPackageName(typeDeclarations.get(0));
-    Assert.assertEquals("org.alfasoftware.astra.core.utils", packageName.getName().getFullyQualifiedName());
+    assertEquals("org.alfasoftware.astra.core.utils", packageName.getName().getFullyQualifiedName());
   }
 
-  private ClassVisitor parseM(String source) {
-    CompilationUnit compilationUnit = AstraUtils.readAsCompilationUnit(source, new String[] {TEST_SOURCE}, UseCase.DEFAULT_CLASSPATH_ENTRIES.toArray(new String[0]));
-    ClassVisitor visitor = new ClassVisitor();
-    compilationUnit.accept(visitor);
-    return visitor;
+
+  /**
+   * Used to parse source for test
+   */
+  private static class SourceDeclaration {
+    private final String source;
+
+    SourceDeclaration(String source) {
+      this.source = source;
+    }
+
+    SourceDeclaration(Class<?> source) throws IOException {
+      File before = new File(TEST_EXAMPLES + "/" + source.getName().replaceAll("\\.", "/") + ".java");
+      this.source = new String(Files.readAllBytes(before.toPath()));
+    }
+
+    ClassVisitor getClassVisitor() {
+      ClassVisitor visitor = new ClassVisitor();
+      getCompilationUnit().accept(visitor);
+      return visitor;
+    }
+
+    CompilationUnit getCompilationUnit() {
+      return AstraUtils.readAsCompilationUnit(source, new String[] {SOURCE, TEST_SOURCE}, UseCase.DEFAULT_CLASSPATH_ENTRIES.toArray(new String[0]));
+    }
   }
 
 
