@@ -22,11 +22,6 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestAstraUtils {
 
-  protected static final String SOURCE = Paths.get(".").toAbsolutePath().normalize().toString().concat("/src/main/java");
-  protected static final String TEST_SOURCE = Paths.get(".").toAbsolutePath().normalize().toString().concat("/src/test/java");
-  protected static final String TEST_EXAMPLES = "./src/test/java";
-
-
   /**
    * Tests for a method which returns the Java simple name identifier from a qualified name.
    * <a href="https://docs.oracle.com/javase/specs/jls/se11/html/jls-3.html#jls-3.8"> The JLS section 3.8</a> defines an identifier as
@@ -91,6 +86,7 @@ public class TestAstraUtils {
   }
 
 
+  // TODO add otehr package name case
   @Test
   public void testGetPackageName() {
     // Given
@@ -111,8 +107,14 @@ public class TestAstraUtils {
   /**
    * Used to parse source for test
    */
+  // TODO Maybe move it to a dedicated file and use it in other test classes instead of parse method
   private static class SourceDeclaration {
+    private static final String SOURCE = Paths.get(".").toAbsolutePath().normalize().toString().concat("/src/main/java");
+    private static final String TEST_SOURCE = Paths.get(".").toAbsolutePath().normalize().toString().concat("/src/test/java");
+    private static final String TEST_EXAMPLES = "./src/test/java";
+
     private final String source;
+
 
     SourceDeclaration(String source) {
       this.source = source;
